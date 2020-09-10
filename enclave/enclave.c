@@ -24,14 +24,14 @@ int session_list_empty(void) {
 }
 
 int find_session(char* uid, tdbus_session_t** session) {
-	if(session_list_empty() || (session_id == 0)) {
+	if(session_list_empty() || (strlen(uid) == 0)) {
 		return 0;
 	}
 
 	size_t i;
 	for (i = 0; i < cvector_size(_tdbus_sessions); ++i) {
 		if (strncmp(_tdbus_sessions[i].uid, uid, strlen(uid)) == 0) {
-			*session = &(session_list[i]);
+			*session = &(_tdbus_sessions[i]);
 
 			return 1;
 		}
