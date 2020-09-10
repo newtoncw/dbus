@@ -1,4 +1,4 @@
-#include "enclave_u.h"
+#include "dbus-enclave_u.h"
 #include <errno.h>
 
 typedef struct ms_ecall_session_request_t {

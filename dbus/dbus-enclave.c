@@ -1,11 +1,12 @@
+#include "config.h"
 #include "sgx_eid.h"
 #include "sgx_urts.h"
 #include "dbus-enclave_u.h"
 #include "dbus-message.h"
-#include "dbus-string.h"
-#include "dbus-string-private.h"
 #include "dbus-shared.h"
 #include "dbus-enclave-shared.h"
+#include "dbus-pending-call.h"
+#include "dbus-connection-internal.h"
 
 #define ENCLAVE_FILENAME "dbus_enclave.signed.so"
 
@@ -13,10 +14,10 @@ dbus_bool_t _dbus_enclave_validate_session(DBusTrustedSession *session, DBusErro
 	if(session == NULL) {
 		dbus_set_error_const(error, "Session ERROR", "Session must be not null");
 		return FALSE;
-	} else if(session->connection == NULL) {
+	} else if(_dbus_trusted_connection_get_enclave_id_from_session(session) == 0) {
 		dbus_set_error_const(error, "Session ERROR", "Connection must be not null");
 		return FALSE;
-	} else if(strlen(session->tdbus_uid) == 0) {
+	} else if(strlen(_dbus_trusted_connection_get_session_id(session)) == 0) {
 		dbus_set_error_const(error, "Session ERROR", "Invalid session id");
 		return FALSE;
 	}
@@ -68,7 +69,7 @@ void _dbus_enclave_session_request(DBusTrustedConnection *connection, const char
 	strncpy(uid, dbus_message_get_sender(reply), strlen(dbus_message_get_sender(reply)));
 
 	if(ret != SGX_SUCCESS) {
-		dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(ret));
+		dbus_set_error_const(error, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(ret));
 		return;
 	}
 
@@ -115,7 +116,7 @@ void _dbus_enclave_exchange_report(DBusTrustedConnection *connection, const char
 	}
 
 	if(ret != SGX_SUCCESS) {
-		dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(ret));
+		dbus_set_error_const(error, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(ret));
 		return;
 	}
 
@@ -136,14 +137,12 @@ void _dbus_enclave_bus_close_session(DBusTrustedSession *session, DBusError *err
 	char *p_read_dh_msg3;
 	int len_dh_msg3;
 
-	msg = dbus_message_new_method_call(session->destination, session->path, session->iface, DBUS_TRUSTED_CLOSE_SESSION);
+	msg = _dbus_trusted_connection_new_attestation_method_call(session, DBUS_TRUSTED_CLOSE_SESSION);
 	if (msg == NULL) {
 		return;
 	}
 
-	dbus_message_append_args(msg, DBUS_TYPE_UINT64, &(session->tdbus_connection->tdbus_uid), DBUS_TYPE_INVALID);
-
-	dbus_connection_send(session->connection, msg, NULL);
+	dbus_connection_send(_dbus_trusted_connection_get_connection_from_session(session), msg, NULL);
 }
 
 sgx_status_t _dbus_enclave_init_session(uint64_t eid, sgx_dh_session_t *session) {

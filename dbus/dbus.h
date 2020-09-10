@@ -29,9 +29,7 @@
 #include <dbus/dbus-arch-deps.h>
 #include <dbus/dbus-address.h>
 #include <dbus/dbus-bus.h>
-#include <dbus/dbus-trusted-bus.h>
 #include <dbus/dbus-connection.h>
-#include <dbus/dbus-trusted-connection.h>
 #include <dbus/dbus-errors.h>
 #include <dbus/dbus-macros.h>
 #include <dbus/dbus-message.h>

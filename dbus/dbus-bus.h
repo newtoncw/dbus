@@ -90,6 +90,38 @@ void            dbus_bus_remove_match     (DBusConnection *connection,
 
 /** @} */
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+/**
+ * @addtogroup DBusTrustedBus
+ * @{
+ */
+
+DBUS_EXPORT
+DBusTrustedConnection *dbus_bus_get_trusted (DBusBusType   type,
+					   DBusError      *error);
+DBUS_EXPORT
+int
+dbus_bus_request_trusted_name             (DBusTrustedConnection *connection,
+                                           const char     *name,
+                                           unsigned int    flags,
+                                           DBusError      *error);
+DBUS_EXPORT
+DBusTrustedSession* 
+dbus_bus_create_trusted_session 	  (DBusTrustedConnection *connection, 
+					   const char 	  *destination, 
+					   const char     *path, 
+					   const char     *iface, 
+					   DBusError      *error);
+DBUS_EXPORT
+void 
+dbus_bus_close_trusted_session 		  (DBusTrustedSession *session, 
+					   DBusError      *error);
+
+/** @} */
+
 DBUS_END_DECLS
 
 #endif /* DBUS_BUS_H */

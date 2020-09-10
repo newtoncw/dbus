@@ -9,17 +9,7 @@
 #include "sgx_error.h"
 #include "sgx_dh.h"
 #include "sgx_tseal.h"
-#include "dbus-trusted-connection.h"
-
-const char* _dbus_enclave_shared_error_translate(sgx_status_t status);
-
-sgx_status_t _dbus_enclave_internal_encrypt_message(uint64_t eid, char *uid, uint8_t* message, size_t message_size, sgx_aes_gcm_data_t* response, size_t response_size);
-
-sgx_status_t _dbus_enclave_internal_decrypt_message(uint64_t eid, char *uid, sgx_aes_gcm_data_t* message, size_t message_size, uint8_t* response, size_t response_size);
-
-void _dbus_enclave_sharec_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
-
-void _dbus_enclave_shared_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+#include "dbus-connection.h"
 
 sgx_status_t _dbus_enclave_shared_close_session(uint64_t eid, char *uid);
 

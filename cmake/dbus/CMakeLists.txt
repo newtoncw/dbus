@@ -8,9 +8,7 @@ set (dbusinclude_HEADERS
 	${DBUS_DIR}/dbus.h
 	${DBUS_DIR}/dbus-address.h
 	${DBUS_DIR}/dbus-bus.h
-	${DBUS_DIR}/dbus-trusted-bus.h
 	${DBUS_DIR}/dbus-connection.h
-	${DBUS_DIR}/dbus-trusted-connection.h
 	${DBUS_DIR}/dbus-errors.h
 	${DBUS_DIR}/dbus-macros.h
 	${DBUS_DIR}/dbus-memory.h
@@ -19,7 +17,6 @@ set (dbusinclude_HEADERS
 	${DBUS_DIR}/dbus-pending-call.h
 	${DBUS_DIR}/dbus-protocol.h
 	${DBUS_DIR}/dbus-server.h
-	${DBUS_DIR}/dbus-trusted-session.h
 	${DBUS_DIR}/dbus-shared.h
 	${DBUS_DIR}/dbus-signature.h
 	${DBUS_DIR}/dbus-syntax.h
@@ -36,9 +33,7 @@ set (DBUS_LIB_SOURCES
 	${DBUS_DIR}/dbus-address.c
 	${DBUS_DIR}/dbus-auth.c
 	${DBUS_DIR}/dbus-bus.c
-	${DBUS_DIR}/dbus-trusted-bus.c
 	${DBUS_DIR}/dbus-connection.c
-	${DBUS_DIR}/dbus-trusted-connection.c
 	${DBUS_DIR}/dbus-credentials.c
 	${DBUS_DIR}/dbus-errors.c
 	${DBUS_DIR}/dbus-keyring.c
@@ -55,7 +50,6 @@ set (DBUS_LIB_SOURCES
 	${DBUS_DIR}/dbus-server.c
 	${DBUS_DIR}/dbus-server-socket.c
 	${DBUS_DIR}/dbus-server-debug-pipe.c
-	${DBUS_DIR}/dbus-trusted-session.c
 	${DBUS_DIR}/dbus-sha.c
 	${DBUS_DIR}/dbus-signature.c
 	${DBUS_DIR}/dbus-syntax.c

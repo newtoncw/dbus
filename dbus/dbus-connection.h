@@ -50,6 +50,8 @@ typedef struct DBusPreallocatedSend DBusPreallocatedSend;
 typedef struct DBusPendingCall DBusPendingCall;
 /** Opaque type representing a connection to a remote application and associated incoming/outgoing message queues. */
 typedef struct DBusConnection DBusConnection;
+typedef struct DBusConnection DBusTrustedConnection;
+typedef struct DBusTrustedSession DBusTrustedSession;
 /** Set of functions that must be implemented to handle messages sent to a particular object path. */
 typedef struct DBusObjectPathVTable DBusObjectPathVTable;
 
@@ -242,8 +244,6 @@ dbus_bool_t        dbus_connection_set_watch_functions          (DBusConnection 
                                                                  DBusWatchToggledFunction    toggled_function,
                                                                  void                       *data,
                                                                  DBusFreeFunction            free_data_function);
-DBUS_EXPORT
-dbus_bool_t        dbus_connection_is_trusted                   (DBusConnection             *connection);
 DBUS_EXPORT
 dbus_bool_t        dbus_connection_set_timeout_functions        (DBusConnection             *connection,
                                                                  DBusAddTimeoutFunction      add_function,
@@ -520,6 +520,42 @@ DBUS_EXPORT
 dbus_bool_t dbus_timeout_handle       (DBusTimeout      *timeout);
 DBUS_EXPORT
 dbus_bool_t dbus_timeout_get_enabled  (DBusTimeout      *timeout);
+
+/** @} */
+
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+/**
+ * @addtogroup DBusTrustedConnection
+ * @{
+ */
+
+DBUS_EXPORT
+dbus_bool_t        dbus_connection_is_trusted                   (DBusConnection             *connection);
+DBUS_EXPORT
+dbus_bool_t        dbus_trusted_connection_send                 (DBusTrustedSession         *session,
+                                                                 DBusMessage                *message,
+                                                                 dbus_uint32_t              *client_serial,
+                                                                 DBusError                  *error);
+DBUS_EXPORT
+DBusMessage* 	   dbus_trusted_connection_send_with_reply_and_block (DBusTrustedSession    *session, 
+								 DBusMessage 		    *message, 
+								 int 			     timeout_milliseconds, 
+								 DBusError 		    *error);
+DBUS_EXPORT
+void 		   dbus_trusted_connection_send_preallocated   (DBusTrustedSession 	    *session, 
+							 	DBusPreallocatedSend 	    *preallocated, 
+								DBusMessage 		    *message, 
+								dbus_uint32_t 		    *client_serial,
+                                                                DBusError                   *error);
+DBUS_EXPORT
+dbus_bool_t 	   dbus_trusted_connection_send_with_reply     (DBusTrustedSession 	    *session, 
+								DBusMessage 		    *message, 
+								DBusPendingCall 	   **pending_return, 
+								int 			     timeout_milliseconds,
+                                                                DBusError                   *error);
 
 /** @} */
 

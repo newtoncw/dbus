@@ -31,6 +31,8 @@
 #include <dbus/dbus-list.h>
 #include <dbus/dbus-timeout.h>
 #include <dbus/dbus-dataslot.h>
+#include "sgx_error.h"
+#include "sgx_tseal.h"
 
 DBUS_BEGIN_DECLS
 
@@ -70,10 +72,6 @@ void              _dbus_connection_toggle_watch_unlocked       (DBusConnection  
 dbus_bool_t       _dbus_connection_handle_watch                (DBusWatch          *watch,
                                                                 unsigned int        condition,
                                                                 void               *data);
-void              _dbus_connection_send_attestation_reply      (DBusConnection     *connection, 
-                                                                DBusMessage        *message, 
-                                                                DBusMessage        *reply, 
-                                                                DBusError          *error);
 dbus_bool_t       _dbus_connection_add_timeout_unlocked        (DBusConnection     *connection,
                                                                 DBusTimeout        *timeout);
 void              _dbus_connection_remove_timeout_unlocked     (DBusConnection     *connection,
@@ -81,8 +79,6 @@ void              _dbus_connection_remove_timeout_unlocked     (DBusConnection  
 void              _dbus_connection_toggle_timeout_unlocked     (DBusConnection     *connection,
                                                                 DBusTimeout        *timeout,
                                                                 dbus_bool_t         enabled);
-void              _dbus_connection_set_enclave_id              (DBusConnection     *connection, unsigned long int  eid);
-unsigned long int _dbus_connection_get_enclave_id              (DBusConnection     *connection);
 DBusConnection*   _dbus_connection_new_for_transport           (DBusTransport      *transport);
 void              _dbus_connection_do_iteration_unlocked       (DBusConnection     *connection,
                                                                 DBusPendingCall    *pending,
@@ -154,6 +150,26 @@ void           _dbus_bus_notify_shared_connection_disconnected_unlocked (DBusCon
 
 /** @} */
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+void              _dbus_connection_send_attestation_reply      (DBusConnection     *connection, 
+                                                                DBusMessage        *message, 
+                                                                DBusMessage        *reply, 
+                                                                DBusError          *error);
+void              _dbus_trusted_connection_set_enclave_id              (DBusConnection     *connection, unsigned long int  eid);
+unsigned long int _dbus_trusted_connection_get_enclave_id              (DBusConnection     *connection);
+DBusTrustedSession* _dbus_trusted_connection_create_session (DBusTrustedConnection *connection, const char *destination, const char *path, const char *iface, char *uid);
+unsigned long int _dbus_trusted_connection_get_enclave_id_from_session              (DBusTrustedSession     *session);
+char* _dbus_trusted_connection_get_session_id              (DBusTrustedSession     *session);
+DBusMessage* _dbus_trusted_connection_new_attestation_method_call(DBusTrustedSession* session, char* method);
+DBusConnection* _dbus_trusted_connection_get_connection_from_session(DBusTrustedSession* session);
+const char* _dbus_trusted_connection_sgx_error_translate(sgx_status_t status);
+sgx_status_t _dbus_trusted_connection_internal_encrypt_message(uint64_t eid, char *uid, uint8_t* message, size_t message_size, sgx_aes_gcm_data_t* response, size_t response_size);
+sgx_status_t _dbus_trusted_connection_internal_decrypt_message(uint64_t eid, char *uid, sgx_aes_gcm_data_t* message, size_t message_size, uint8_t* response, size_t response_size);
+void _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+void _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
 
 DBUS_END_DECLS
 
