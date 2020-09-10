@@ -46,6 +46,7 @@
 #include "dbus-marshal-basic.h"
 #include "dbus-enclave-reply.h"
 #include "dbus-enclave-shared.h"
+#include "dbus-trusted-session.h"
 
 #ifdef DBUS_DISABLE_CHECKS
 #define TOOK_LOCK_CHECK(connection)
@@ -1937,6 +1938,8 @@ _dbus_connection_open_internal (const char     *address,
     dbus_error_free (&first_error);
   
   dbus_address_entries_free (entries);
+
+  connection->enclave_id = 0;
   return connection;
 }
 
@@ -4539,12 +4542,12 @@ dbus_bool_t dbus_connection_is_trusted (DBusConnection *connection) {
 }
 
 void _dbus_connection_send_attestation_reply (DBusConnection *connection, DBusMessage *message, DBusMessage *reply, DBusError *error) {
-        if (dbus_error_is_set(&err)) {
+        if (dbus_error_is_set(error)) {
 		if (reply)
 			dbus_message_unref(reply);
 
-		reply = dbus_message_new_error(message, err.name, err.message);
-		dbus_error_free(&err);
+		reply = dbus_message_new_error(message, error->name, error->message);
+		dbus_error_free(error);
 	}
 
         dbus_connection_send(connection, reply, NULL);
@@ -4693,17 +4696,17 @@ dbus_connection_dispatch (DBusConnection *connection)
         if(strncmp(member, DBUS_TRUSTED_SESSION_REQUEST, strlen(DBUS_TRUSTED_SESSION_REQUEST)) == 0) {
                 sgx_dh_msg1_t *dh_msg1 = malloc(sizeof(sgx_dh_msg1_t));
 
-                status = _dbus_enclave_reply_session_request(connection->enclave_id, sender, dh_msg1);
+                status = _dbus_enclave_reply_session_request(connection->enclave_id, (char*)sender, dh_msg1);
 
                 if(status == SGX_SUCCESS) {
                         reply = dbus_message_new_method_return(message);
                 } else {
-                        dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
+                        dbus_set_error_const(&err, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
                 }
 
                 dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg1, sizeof(sgx_dh_msg1_t), DBUS_TYPE_INVALID);
 
-                _dbus_connection_send_attestation_reply(connection, messagem reply, &error);
+                _dbus_connection_send_attestation_reply(connection, message, reply, &err);
 
                 result = DBUS_HANDLER_RESULT_HANDLED;
         } else if(strncmp(member, DBUS_TRUSTED_EXCHANGE_REPORT, strlen(DBUS_TRUSTED_EXCHANGE_REPORT)) == 0) {
@@ -4716,33 +4719,30 @@ dbus_connection_dispatch (DBusConnection *connection)
 
                 memcpy(&dh_msg2, pReadData, len);
 
-                status = _dbus_enclave_reply_exchange_report(connection->enclave_id, sender, &dh_msg2, dh_msg3);
+                status = _dbus_enclave_reply_exchange_report(connection->enclave_id, (char*)sender, &dh_msg2, dh_msg3);
 
                 if(status == SGX_SUCCESS) {
                         reply = dbus_message_new_method_return(message);
                 } else {
-                        dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
+                        dbus_set_error_const(&err, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
                 }
 
                 dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg3, sizeof(sgx_dh_msg3_t), DBUS_TYPE_INVALID);
 
-                _dbus_connection_send_attestation_reply(connection, messagem reply, &error);
+                _dbus_connection_send_attestation_reply(connection, message, reply, &err);
 
                 result = DBUS_HANDLER_RESULT_HANDLED;
         } else if(strncmp(member, DBUS_TRUSTED_CLOSE_SESSION, strlen(DBUS_TRUSTED_CLOSE_SESSION)) == 0) {
-                status = _dbus_enclave_reply_close_session(connection->enclave_id, sender);
+                status = _dbus_enclave_reply_close_session(connection->enclave_id, (char*)sender);
 
                 result = DBUS_HANDLER_RESULT_HANDLED;
         } else {
-                TDBusSession *session = malloc(sizeof(TDBusSession));
-		session->tdbus_connection = connection;
-                strncpy(session->tdbus_uid, sender, strlen(sender));
-                session->tdbus_uid[strlen(sender)] = '\0';
+                DBusTrustedSession *session = dbus_trusted_connection_create_session (connection, "", "", "", (char *)sender);
 
                 _dbus_enclave_shared_decrypt_message(session, message, &error);
 
                 if (dbus_error_is_set(&err)) {
-                        _dbus_connection_send_attestation_reply(connection, messagem NULL, &error);
+                        _dbus_connection_send_attestation_reply(connection, message, NULL, &err);
 
                         result = DBUS_HANDLER_RESULT_HANDLED;
                 } else {
@@ -6471,5 +6471,13 @@ _dbus_connection_get_address (DBusConnection *connection)
   return _dbus_transport_get_address (connection->transport);
 }
 #endif
+
+void              _dbus_connection_set_enclave_id              (DBusConnection     *connection, unsigned long int  eid) {
+        connection->enclave_id = eid;
+}
+
+unsigned long int _dbus_connection_get_enclave_id              (DBusConnection     *connection) {
+        return connection->enclave_id;
+}
 
 /** @} */

@@ -81,6 +81,8 @@ void              _dbus_connection_remove_timeout_unlocked     (DBusConnection  
 void              _dbus_connection_toggle_timeout_unlocked     (DBusConnection     *connection,
                                                                 DBusTimeout        *timeout,
                                                                 dbus_bool_t         enabled);
+void              _dbus_connection_set_enclave_id              (DBusConnection     *connection, unsigned long int  eid);
+unsigned long int _dbus_connection_get_enclave_id              (DBusConnection     *connection);
 DBusConnection*   _dbus_connection_new_for_transport           (DBusTransport      *transport);
 void              _dbus_connection_do_iteration_unlocked       (DBusConnection     *connection,
                                                                 DBusPendingCall    *pending,

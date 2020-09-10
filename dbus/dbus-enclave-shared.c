@@ -154,3 +154,7 @@ void _dbus_enclave_shared_decrypt_message(DBusTrustedSession *session, DBusMessa
 		real->str[response_size] = '\0';
 	}
 }
+
+sgx_status_t _dbus_enclave_shared_close_session(uint64_t eid, char *uid) {
+	return ecall_close_session(eid, uid);
+}

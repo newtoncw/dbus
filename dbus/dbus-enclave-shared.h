@@ -6,6 +6,10 @@
 #define DBUS_ENCLAVE_SHARED_H
 
 #include "sgx_eid.h"
+#include "sgx_error.h"
+#include "sgx_dh.h"
+#include "sgx_tseal.h"
+#include "dbus-trusted-connection.h"
 
 const char* _dbus_enclave_shared_error_translate(sgx_status_t status);
 
@@ -16,5 +20,7 @@ sgx_status_t _dbus_enclave_internal_decrypt_message(uint64_t eid, char *uid, sgx
 void _dbus_enclave_sharec_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
 
 void _dbus_enclave_shared_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+
+sgx_status_t _dbus_enclave_shared_close_session(uint64_t eid, char *uid);
 
 #endif /* DBUS_ENCLAVE_SHARED_H */

@@ -6,14 +6,6 @@
 #include "dbus-message.h"
 #include "dbus-enclave-shared.h"
 
-typedef struct {
-	char tdbus_uid[255];
-	struct DBusConnection* connection;
-	char* destination;
-	char* path;
-	char* iface;
-} DBusTrustedSession;
-
 dbus_bool_t dbus_trusted_connection_send (DBusTrustedSession *session, DBusMessage *message, dbus_uint32_t *serial, DBusError *error) {
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
 		_dbus_enclave_sharec_encrypt_message(session, message, error);
@@ -22,7 +14,7 @@ dbus_bool_t dbus_trusted_connection_send (DBusTrustedSession *session, DBusMessa
 	return dbus_connection_send(session->connection, message, serial);
 }
 
-DBusMessage* dbus_trusted_connection_send_with_reply_and_block (DBusTrustedSession *session, TDBusMessage *message, int timeout_milliseconds, DBusError *error) {
+DBusMessage* dbus_trusted_connection_send_with_reply_and_block (DBusTrustedSession *session, DBusMessage *message, int timeout_milliseconds, DBusError *error) {
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
 		_dbus_enclave_sharec_encrypt_message(session, message, error);
 	}

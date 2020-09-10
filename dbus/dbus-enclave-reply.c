@@ -26,5 +26,5 @@ sgx_status_t _dbus_enclave_reply_exchange_report(uint64_t eid, char *uid, sgx_dh
 }
 
 void _dbus_enclave_reply_close_session(uint64_t eid, char *uid) {
-	return ecall_close_session(eid, uid);
+	return _dbus_enclave_shared_close_session(eid, uid);
 }

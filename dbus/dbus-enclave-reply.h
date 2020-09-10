@@ -6,6 +6,8 @@
 #define DBUS_ENCLAVE_REPLY_H
 
 #include "sgx_eid.h"
+#include "sgx_error.h"
+#include "sgx_dh.h"
 
 sgx_status_t _dbus_enclave_reply_session_request(uint64_t eid, char *uid, sgx_dh_msg1_t *dh_msg1);
 

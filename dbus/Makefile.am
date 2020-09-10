@@ -142,6 +142,7 @@ dbusinclude_HEADERS=				\
 	dbus-threads.h				\
 	dbus-trusted-bus.h			\
 	dbus-trusted-connection.h		\
+	dbus-trusted-session.h			\
 	dbus-types.h
 
 
@@ -212,6 +213,7 @@ DBUS_LIB_SOURCES=				\
 	dbus-transport-socket.h			\
 	dbus-trusted-bus.c			\
 	dbus-trusted-connection.c		\
+	dbus-trusted-session.c			\
 	dbus-watch.c				\
 	dbus-watch.h
 

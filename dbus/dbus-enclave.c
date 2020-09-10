@@ -9,7 +9,7 @@
 
 #define ENCLAVE_FILENAME "dbus_enclave.signed.so"
 
-dbus_bool_t _dbus_enclave_validate_session(TDBusSession *session, DBusError *error) {
+dbus_bool_t _dbus_enclave_validate_session(DBusTrustedSession *session, DBusError *error) {
 	if(session == NULL) {
 		dbus_set_error_const(error, "Session ERROR", "Session must be not null");
 		return FALSE;
@@ -34,7 +34,7 @@ sgx_status_t _dbus_enclave_create_enclave(sgx_enclave_id_t* tdbus_eid) {
 	return ret;
 }
 
-void _dbus_enclave_session_request(TDBusConnection *connection, const char *destination, const char *path, const char *iface, char *uid, sgx_dh_msg1_t *dh_msg1, DBusError *error) {
+void _dbus_enclave_session_request(DBusTrustedConnection *connection, const char *destination, const char *path, const char *iface, char *uid, sgx_dh_msg1_t *dh_msg1, DBusError *error) {
 	sgx_status_t ret = SGX_SUCCESS;
 	DBusMessage* reply;
 	DBusMessage* msg;
@@ -82,7 +82,7 @@ void _dbus_enclave_session_request(TDBusConnection *connection, const char *dest
 	dbus_message_unref(reply);
 }
 
-void _dbus_enclave_exchange_report(TDBusConnection *connection, const char *destination, const char *path, const char *iface, sgx_dh_msg2_t *dh_msg2, sgx_dh_msg3_t *dh_msg3, DBusError *error) {
+void _dbus_enclave_exchange_report(DBusTrustedConnection *connection, const char *destination, const char *path, const char *iface, sgx_dh_msg2_t *dh_msg2, sgx_dh_msg3_t *dh_msg3, DBusError *error) {
 	sgx_status_t ret = SGX_SUCCESS;
 	DBusMessage* reply;
 	DBusMessage* msg;
@@ -129,7 +129,7 @@ void _dbus_enclave_exchange_report(TDBusConnection *connection, const char *dest
 	dbus_message_unref(reply);
 }
 
-void _dbus_enclave_bus_close_session(TDBusSession *session, DBusError *error) {
+void _dbus_enclave_bus_close_session(DBusTrustedSession *session, DBusError *error) {
 	sgx_status_t ret = SGX_SUCCESS;
 	DBusMessage* reply;
 	DBusMessage* msg;

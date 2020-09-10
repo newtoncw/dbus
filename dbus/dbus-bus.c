@@ -517,7 +517,6 @@ out:
   if (connection == NULL)
     _DBUS_ASSERT_ERROR_IS_SET (error);
 
-  conn->enclave_id = 0;
   _DBUS_UNLOCK (bus);
   return connection;
 }
