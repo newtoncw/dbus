@@ -44,6 +44,8 @@
 #include "dbus-threads-internal.h"
 #include "dbus-bus.h"
 #include "dbus-marshal-basic.h"
+#include "dbus-enclave-reply.h"
+#include "dbus-enclave-shared.h"
 
 #ifdef DBUS_DISABLE_CHECKS
 #define TOOK_LOCK_CHECK(connection)
@@ -304,6 +306,8 @@ struct DBusConnection
   DBusObjectTree *objects; /**< Object path handlers registered with this connection */
 
   char *server_guid; /**< GUID of server if we are in shared_connections, #NULL if server GUID is unknown or connection is private */
+
+  unsigned long int enclave_id; /**< Identifies the enclave in trusted connections */
 
   /* These two MUST be bools and not bitfields, because they are protected by a separate lock
    * from connection->mutex and all bitfields in a word have to be read/written together.
@@ -4530,6 +4534,22 @@ _dbus_connection_run_builtin_filters_unlocked_no_update (DBusConnection *connect
   return _dbus_connection_peer_filter_unlocked_no_update (connection, message);
 }
 
+dbus_bool_t dbus_connection_is_trusted (DBusConnection *connection) {
+        return (connection->enclave_id > 0);
+}
+
+void _dbus_connection_send_attestation_reply (DBusConnection *connection, DBusMessage *message, DBusMessage *reply, DBusError *error) {
+        if (dbus_error_is_set(&err)) {
+		if (reply)
+			dbus_message_unref(reply);
+
+		reply = dbus_message_new_error(message, err.name, err.message);
+		dbus_error_free(&err);
+	}
+
+        dbus_connection_send(connection, reply, NULL);
+}
+
 /**
  * Processes any incoming data.
  *
@@ -4658,6 +4678,81 @@ dbus_connection_dispatch (DBusConnection *connection)
       result = DBUS_HANDLER_RESULT_HANDLED;
       goto out;
     }
+
+  //É AQUI QUE VAMOS INTERCEPTAR AS MENSAGENS PARA FAZER A ATESTAÇÃO E DECIFRÁ-LA
+
+  if (dbus_connection_is_trusted(connection) && (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL)) {
+        const char *member = dbus_message_get_member(message);
+        const char *sender = dbus_message_get_sender(message);
+        DBusError err;
+	DBusMessage *reply = NULL;
+        sgx_status_t status;
+
+        dbus_error_init(&err);
+
+        if(strncmp(member, DBUS_TRUSTED_SESSION_REQUEST, strlen(DBUS_TRUSTED_SESSION_REQUEST)) == 0) {
+                sgx_dh_msg1_t *dh_msg1 = malloc(sizeof(sgx_dh_msg1_t));
+
+                status = _dbus_enclave_reply_session_request(connection->enclave_id, sender, dh_msg1);
+
+                if(status == SGX_SUCCESS) {
+                        reply = dbus_message_new_method_return(message);
+                } else {
+                        dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
+                }
+
+                dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg1, sizeof(sgx_dh_msg1_t), DBUS_TYPE_INVALID);
+
+                _dbus_connection_send_attestation_reply(connection, messagem reply, &error);
+
+                result = DBUS_HANDLER_RESULT_HANDLED;
+        } else if(strncmp(member, DBUS_TRUSTED_EXCHANGE_REPORT, strlen(DBUS_TRUSTED_EXCHANGE_REPORT)) == 0) {
+                char *pReadData;
+		int len;
+                sgx_dh_msg2_t dh_msg2;
+                sgx_dh_msg3_t *dh_msg3 = malloc(sizeof(sgx_dh_msg3_t));
+
+                dbus_message_get_args(message, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &pReadData, &len, DBUS_TYPE_INVALID);
+
+                memcpy(&dh_msg2, pReadData, len);
+
+                status = _dbus_enclave_reply_exchange_report(connection->enclave_id, sender, &dh_msg2, dh_msg3);
+
+                if(status == SGX_SUCCESS) {
+                        reply = dbus_message_new_method_return(message);
+                } else {
+                        dbus_set_error_const(error, "SGX ERROR", _dbus_enclave_shared_error_translate(status));
+                }
+
+                dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg3, sizeof(sgx_dh_msg3_t), DBUS_TYPE_INVALID);
+
+                _dbus_connection_send_attestation_reply(connection, messagem reply, &error);
+
+                result = DBUS_HANDLER_RESULT_HANDLED;
+        } else if(strncmp(member, DBUS_TRUSTED_CLOSE_SESSION, strlen(DBUS_TRUSTED_CLOSE_SESSION)) == 0) {
+                status = _dbus_enclave_reply_close_session(connection->enclave_id, sender);
+
+                result = DBUS_HANDLER_RESULT_HANDLED;
+        } else {
+                TDBusSession *session = malloc(sizeof(TDBusSession));
+		session->tdbus_connection = connection;
+                strncpy(session->tdbus_uid, sender, strlen(sender));
+                session->tdbus_uid[strlen(sender)] = '\0';
+
+                _dbus_enclave_shared_decrypt_message(session, message, &error);
+
+                if (dbus_error_is_set(&err)) {
+                        _dbus_connection_send_attestation_reply(connection, messagem NULL, &error);
+
+                        result = DBUS_HANDLER_RESULT_HANDLED;
+                } else {
+                        result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+                }
+        }
+  }
+
+  if (result != DBUS_HANDLER_RESULT_NOT_YET_HANDLED)
+    goto out;
 
   result = _dbus_connection_run_builtin_filters_unlocked_no_update (connection, message);
   if (result != DBUS_HANDLER_RESULT_NOT_YET_HANDLED)

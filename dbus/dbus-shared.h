@@ -124,6 +124,11 @@ typedef enum
 #define DBUS_START_REPLY_SUCCESS         1 /**< Service was auto started */
 #define DBUS_START_REPLY_ALREADY_RUNNING 2 /**< Service was already running */
 
+/** DBus Trusted flags */
+#define DBUS_TRUSTED_SESSION_REQUEST    "__dbus_trusted_session_request"
+#define DBUS_TRUSTED_EXCHANGE_REPORT    "__dbus_trusted_exchange_report"
+#define DBUS_TRUSTED_CLOSE_SESSION      "__dbus_trusted_close_session"
+
 /** @} */
 
 #ifdef __cplusplus

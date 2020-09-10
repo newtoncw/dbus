@@ -243,6 +243,8 @@ dbus_bool_t        dbus_connection_set_watch_functions          (DBusConnection 
                                                                  void                       *data,
                                                                  DBusFreeFunction            free_data_function);
 DBUS_EXPORT
+dbus_bool_t        dbus_connection_is_trusted                   (DBusConnection             *connection);
+DBUS_EXPORT
 dbus_bool_t        dbus_connection_set_timeout_functions        (DBusConnection             *connection,
                                                                  DBusAddTimeoutFunction      add_function,
                                                                  DBusRemoveTimeoutFunction   remove_function,

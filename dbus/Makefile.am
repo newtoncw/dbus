@@ -140,6 +140,8 @@ dbusinclude_HEADERS=				\
 	dbus-signature.h			\
 	dbus-syntax.h				\
 	dbus-threads.h				\
+	dbus-trusted-bus.h			\
+	dbus-trusted-connection.h		\
 	dbus-types.h
 
 
@@ -157,6 +159,14 @@ DBUS_LIB_SOURCES=				\
 	dbus-connection-internal.h		\
 	dbus-credentials.c			\
 	dbus-credentials.h			\
+	dbus-enclave.c				\
+	dbus-enclave.h				\
+	dbus-enclave-reply.c			\
+	dbus-enclave-reply.h			\
+	dbus-enclave-shared.c			\
+	dbus-enclave-shared.h			\
+	dbus-enclave_u.c			\
+	dbus-enclave_u.h			\
 	dbus-errors.c				\
 	dbus-keyring.c				\
 	dbus-keyring.h				\
@@ -200,6 +210,8 @@ DBUS_LIB_SOURCES=				\
 	dbus-transport-protected.h		\
 	dbus-transport-socket.c			\
 	dbus-transport-socket.h			\
+	dbus-trusted-bus.c			\
+	dbus-trusted-connection.c		\
 	dbus-watch.c				\
 	dbus-watch.h
 

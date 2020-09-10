@@ -70,6 +70,10 @@ void              _dbus_connection_toggle_watch_unlocked       (DBusConnection  
 dbus_bool_t       _dbus_connection_handle_watch                (DBusWatch          *watch,
                                                                 unsigned int        condition,
                                                                 void               *data);
+void              _dbus_connection_send_attestation_reply      (DBusConnection     *connection, 
+                                                                DBusMessage        *message, 
+                                                                DBusMessage        *reply, 
+                                                                DBusError          *error);
 dbus_bool_t       _dbus_connection_add_timeout_unlocked        (DBusConnection     *connection,
                                                                 DBusTimeout        *timeout);
 void              _dbus_connection_remove_timeout_unlocked     (DBusConnection     *connection,

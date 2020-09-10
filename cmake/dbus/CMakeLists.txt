@@ -8,7 +8,9 @@ set (dbusinclude_HEADERS
 	${DBUS_DIR}/dbus.h
 	${DBUS_DIR}/dbus-address.h
 	${DBUS_DIR}/dbus-bus.h
+	${DBUS_DIR}/dbus-trusted-bus.h
 	${DBUS_DIR}/dbus-connection.h
+	${DBUS_DIR}/dbus-trusted-connection.h
 	${DBUS_DIR}/dbus-errors.h
 	${DBUS_DIR}/dbus-macros.h
 	${DBUS_DIR}/dbus-memory.h
@@ -33,7 +35,9 @@ set (DBUS_LIB_SOURCES
 	${DBUS_DIR}/dbus-address.c
 	${DBUS_DIR}/dbus-auth.c
 	${DBUS_DIR}/dbus-bus.c
+	${DBUS_DIR}/dbus-trusted-bus.c
 	${DBUS_DIR}/dbus-connection.c
+	${DBUS_DIR}/dbus-trusted-connection.c
 	${DBUS_DIR}/dbus-credentials.c
 	${DBUS_DIR}/dbus-errors.c
 	${DBUS_DIR}/dbus-keyring.c
@@ -117,6 +121,10 @@ endif(UNIX)
 ### be underscore-prefixed)
 set (DBUS_SHARED_SOURCES
 	${DBUS_DIR}/dbus-dataslot.c
+	${DBUS_DIR}/dbus-enclave.c
+	${DBUS_DIR}/dbus-enclave-reply.c
+	${DBUS_DIR}/dbus-enclave-shared.c
+	${DBUS_DIR}/dbus-enclave_u.c
 	${DBUS_DIR}/dbus-file.c
 	${DBUS_DIR}/dbus-hash.c
 	${DBUS_DIR}/dbus-internals.c
@@ -131,6 +139,10 @@ set (DBUS_SHARED_SOURCES
 
 set (DBUS_SHARED_HEADERS
 	${DBUS_DIR}/dbus-dataslot.h
+	${DBUS_DIR}/dbus-enclave.h
+	${DBUS_DIR}/dbus-enclave-reply.h
+	${DBUS_DIR}/dbus-enclave-shared.h
+	${DBUS_DIR}/dbus-enclave_u.h
 	${DBUS_DIR}/dbus-file.h
 	${DBUS_DIR}/dbus-hash.h
 	${DBUS_DIR}/dbus-internals.h
