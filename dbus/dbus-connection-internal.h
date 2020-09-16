@@ -170,6 +170,7 @@ sgx_status_t _dbus_trusted_connection_internal_encrypt_message(uint64_t eid, cha
 sgx_status_t _dbus_trusted_connection_internal_decrypt_message(uint64_t eid, char *uid, sgx_aes_gcm_data_t* message, size_t message_size, uint8_t* response, size_t response_size);
 void _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
 void _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+DBusHandlerResult _dbus_connection_filter_attestation_messages (DBusConnection *connection, DBusMessage *message);
 
 DBUS_END_DECLS
 
