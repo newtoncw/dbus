@@ -5480,4 +5480,27 @@ _dbus_variant_free (DBusVariant *self)
 
 /** @} */
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+DBusMessage* _dbus_message_make_a_copy(DBusMessage* message) {
+	DBusMessage *ret = dbus_message_new(dbus_message_get_type(message)); 
+
+	dbus_message_set_serial(ret, dbus_message_get_serial(message));
+	if(dbus_message_get_reply_serial(message) != 0) dbus_message_set_reply_serial(ret, dbus_message_get_reply_serial(message));
+	dbus_message_set_no_reply(ret, dbus_message_get_no_reply(message));
+	if(dbus_message_get_sender(message) != NULL) dbus_message_set_sender(ret, dbus_message_get_sender(message));
+	if(dbus_message_get_destination(message) != NULL) dbus_message_set_destination(ret, dbus_message_get_destination(message));
+	if(dbus_message_get_path(message) != NULL) dbus_message_set_path(ret, dbus_message_get_path(message));
+	if(dbus_message_get_interface(message) != NULL) dbus_message_set_interface(ret, dbus_message_get_interface(message));
+	if(dbus_message_get_member(message) != NULL) dbus_message_set_member(ret, dbus_message_get_member(message));
+
+	return ret;
+}
+
+void _dbus_message_set_serial_no_assert (DBusMessage *message, dbus_uint32_t serial) {
+        _dbus_header_set_serial_no_assert (&message->header, serial);
+}
+
 /* tests in dbus-message-util.c */

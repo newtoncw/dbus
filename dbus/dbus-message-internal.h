@@ -145,6 +145,13 @@ typedef struct DBusInitialFDs DBusInitialFDs;
 DBusInitialFDs *_dbus_check_fdleaks_enter (void);
 void            _dbus_check_fdleaks_leave (DBusInitialFDs *fds);
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+DBusMessage* _dbus_message_make_a_copy(DBusMessage* message);
+void _dbus_message_set_serial_no_assert (DBusMessage *message, dbus_uint32_t serial);
+
 DBUS_END_DECLS
 
 #endif /* DBUS_MESSAGE_INTERNAL_H */

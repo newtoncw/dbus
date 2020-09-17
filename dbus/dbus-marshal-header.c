@@ -1511,4 +1511,12 @@ _dbus_header_byteswap (DBusHeader *header,
   _dbus_string_set_byte (&header->data, BYTE_ORDER_OFFSET, new_order);
 }
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+
+void _dbus_header_set_serial_no_assert (DBusHeader *header, dbus_uint32_t serial) {
+        _dbus_marshal_set_uint32 (&header->data, SERIAL_OFFSET, serial, _dbus_header_get_byte_order (header));
+}
+
 /** @} */

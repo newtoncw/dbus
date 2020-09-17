@@ -22,7 +22,6 @@
  */
 
 #include <config.h>
-#include <stdio.h>
 #include "dbus-shared.h"
 #include "dbus-connection.h"
 #include "dbus-list.h"
@@ -3695,8 +3694,6 @@ _dbus_connection_read_write_dispatch (DBusConnection *connection,
   DBusDispatchStatus dstatus;
   dbus_bool_t progress_possible;
 
-  printf("ENTER _dbus_connection_read_write_dispatch\n");
-
   /* Need to grab a ref here in case we're a private connection and
    * the user drops the last ref in a handler we call; see bug 
    * https://bugs.freedesktop.org/show_bug.cgi?id=15635
@@ -3991,8 +3988,6 @@ dbus_connection_steal_borrowed_message (DBusConnection *connection,
 static DBusList*
 _dbus_connection_pop_message_link_unlocked (DBusConnection *connection)
 {
-  printf("ENTER _dbus_connection_pop_message_link_unlocked\n");
-
   HAVE_LOCK_CHECK (connection);
   
   _dbus_assert (connection->message_borrowed == NULL);
@@ -4025,7 +4020,7 @@ _dbus_connection_pop_message_link_unlocked (DBusConnection *connection)
 
       check_disconnected_message_arrived_unlocked (connection, link->data);
 
-      if(_dbus_connection_filter_attestation_messages(connection, link->data) == DBUS_HANDLER_RESULT_HANDLED) {
+      if(_dbus_connection_filter_attestation_messages(connection, link) == DBUS_HANDLER_RESULT_HANDLED) {
         return NULL;
       } else {
         return link;
@@ -4554,103 +4549,6 @@ _dbus_connection_run_builtin_filters_unlocked_no_update (DBusConnection *connect
   return _dbus_connection_peer_filter_unlocked_no_update (connection, message);
 }
 
-dbus_bool_t dbus_connection_is_trusted (DBusConnection *connection) {
-        return (connection->enclave_id > 0);
-}
-
-void _dbus_connection_send_attestation_reply (DBusConnection *connection, DBusMessage *message, DBusMessage *reply, DBusError *error) {
-        if (dbus_error_is_set(error)) {
-		if (reply)
-			dbus_message_unref(reply);
-
-		reply = dbus_message_new_error(message, error->name, error->message);
-		dbus_error_free(error);
-	}
-
-        CONNECTION_UNLOCK(connection);
-        dbus_connection_send(connection, reply, NULL);
-        CONNECTION_LOCK(connection);
-}
-
-DBusHandlerResult _dbus_connection_filter_attestation_messages (DBusConnection *connection, DBusMessage *message) {
-        if (dbus_connection_is_trusted(connection) && (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL)) {
-                const char *member = dbus_message_get_member(message);
-                const char *sender = dbus_message_get_sender(message);
-                DBusError err;
-	        DBusMessage *reply = NULL;
-                sgx_status_t status;
-
-                dbus_error_init(&err);
-
-                if(strncmp(member, DBUS_TRUSTED_SESSION_REQUEST, strlen(DBUS_TRUSTED_SESSION_REQUEST)) == 0) {
-                        printf("%s catched!\n", DBUS_TRUSTED_SESSION_REQUEST);
-
-                        sgx_dh_msg1_t *dh_msg1 = malloc(sizeof(sgx_dh_msg1_t));
-
-                        status = _dbus_enclave_reply_session_request(connection->enclave_id, (char*)sender, dh_msg1);
-
-                        if(status == SGX_SUCCESS) {
-                                reply = dbus_message_new_method_return(message);
-                        } else {
-                                printf("SGX ERROR: %s\n", _dbus_trusted_connection_sgx_error_translate(status));
-                                dbus_set_error_const(&err, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
-                        }
-
-                        dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg1, sizeof(sgx_dh_msg1_t), DBUS_TYPE_INVALID);
-
-                        _dbus_connection_send_attestation_reply(connection, message, reply, &err);
-
-                        return DBUS_HANDLER_RESULT_HANDLED;
-                } else if(strncmp(member, DBUS_TRUSTED_EXCHANGE_REPORT, strlen(DBUS_TRUSTED_EXCHANGE_REPORT)) == 0) {
-                        printf("%s catched!\n", DBUS_TRUSTED_EXCHANGE_REPORT);
-                        char *pReadData;
-		        int len;
-                        sgx_dh_msg2_t dh_msg2;
-                        sgx_dh_msg3_t *dh_msg3 = malloc(sizeof(sgx_dh_msg3_t));
-
-                        dbus_message_get_args(message, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &pReadData, &len, DBUS_TYPE_INVALID);
-
-                        memcpy(&dh_msg2, pReadData, len);
-
-                        status = _dbus_enclave_reply_exchange_report(connection->enclave_id, (char*)sender, &dh_msg2, dh_msg3);
-
-                        if(status == SGX_SUCCESS) {
-                                reply = dbus_message_new_method_return(message);
-                        } else {
-                                printf("SGX ERROR: %s\n", _dbus_trusted_connection_sgx_error_translate(status));
-                                dbus_set_error_const(&err, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
-                        }
-
-                        dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg3, sizeof(sgx_dh_msg3_t), DBUS_TYPE_INVALID);
-
-                        _dbus_connection_send_attestation_reply(connection, message, reply, &err);
-
-                        return DBUS_HANDLER_RESULT_HANDLED;
-                } else if(strncmp(member, DBUS_TRUSTED_CLOSE_SESSION, strlen(DBUS_TRUSTED_CLOSE_SESSION)) == 0) {
-                        printf("%s catched!\n", DBUS_TRUSTED_CLOSE_SESSION);
-                        status = _dbus_enclave_reply_close_session(connection->enclave_id, (char*)sender);
-
-                        return DBUS_HANDLER_RESULT_HANDLED;
-                } else {
-                        printf("MESSAGE catched!\n");
-                        DBusTrustedSession *session = _dbus_trusted_connection_create_session (connection, "", "", "", (char *)sender);
-
-                        _dbus_trusted_connection_decrypt_message(session, message, &err);
-
-                        if (dbus_error_is_set(&err)) {
-                                printf("SGX ERROR: %s\n", _dbus_trusted_connection_sgx_error_translate(status));
-                                _dbus_connection_send_attestation_reply(connection, message, NULL, &err);
-
-                                return DBUS_HANDLER_RESULT_HANDLED;
-                        } else {
-                                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-                        }
-                }
-        } else {
-                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-        }
-}
-
 /**
  * Processes any incoming data.
  *
@@ -4703,8 +4601,6 @@ dbus_connection_dispatch (DBusConnection *connection)
   dbus_int32_t reply_serial;
   DBusDispatchStatus status;
   dbus_bool_t found_object;
-
-  printf("ENTER dbus_connection_dispatch\n");
 
   _dbus_return_val_if_fail (connection != NULL, DBUS_DISPATCH_COMPLETE);
 
@@ -6506,6 +6402,100 @@ _dbus_connection_get_address (DBusConnection *connection)
  * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
  */
 
+dbus_bool_t dbus_connection_is_trusted (DBusConnection *connection) {
+        return (connection->enclave_id > 0);
+}
+
+void _dbus_connection_send_attestation_reply (DBusConnection *connection, DBusMessage *message, DBusMessage *reply, DBusError *error) {
+        if (dbus_error_is_set(error)) {
+		if (reply)
+			dbus_message_unref(reply);
+
+		reply = dbus_message_new_error(message, error->name, error->message);
+		dbus_error_free(error);
+	}
+
+        /** We need unlock the connection a little bit to send the response
+         *  We hope to get lock back right after this
+         */
+        CONNECTION_UNLOCK(connection);
+        dbus_connection_send(connection, reply, NULL);
+        CONNECTION_LOCK(connection);
+}
+
+DBusHandlerResult _dbus_connection_filter_attestation_messages (DBusConnection *connection, DBusList *link) {
+        DBusMessage* message = link->data;
+
+        if (dbus_connection_is_trusted(connection) && (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL)) {
+                const char *member = dbus_message_get_member(message);
+                const char *sender = dbus_message_get_sender(message);
+                DBusError err;
+	        DBusMessage *reply = NULL;
+                sgx_status_t status;
+
+                dbus_error_init(&err);
+
+                if(strncmp(member, DBUS_TRUSTED_SESSION_REQUEST, strlen(DBUS_TRUSTED_SESSION_REQUEST)) == 0) {
+                        sgx_dh_msg1_t *dh_msg1 = malloc(sizeof(sgx_dh_msg1_t));
+
+                        status = _dbus_enclave_reply_session_request(connection->enclave_id, (char*)sender, dh_msg1);
+
+                        if(status == SGX_SUCCESS) {
+                                reply = dbus_message_new_method_return(message);
+                        } else {
+                                dbus_set_error_const(&err, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
+                        }
+
+                        dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg1, sizeof(sgx_dh_msg1_t), DBUS_TYPE_INVALID);
+
+                        _dbus_connection_send_attestation_reply(connection, message, reply, &err);
+
+                        return DBUS_HANDLER_RESULT_HANDLED;
+                } else if(strncmp(member, DBUS_TRUSTED_EXCHANGE_REPORT, strlen(DBUS_TRUSTED_EXCHANGE_REPORT)) == 0) {
+                        char *pReadData;
+		        int len;
+                        sgx_dh_msg2_t dh_msg2;
+                        sgx_dh_msg3_t *dh_msg3 = malloc(sizeof(sgx_dh_msg3_t));
+
+                        dbus_message_get_args(message, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &pReadData, &len, DBUS_TYPE_INVALID);
+
+                        memcpy(&dh_msg2, pReadData, len);
+
+                        status = _dbus_enclave_reply_exchange_report(connection->enclave_id, (char*)sender, &dh_msg2, dh_msg3);
+
+                        if(status == SGX_SUCCESS) {
+                                reply = dbus_message_new_method_return(message);
+                        } else {
+                                dbus_set_error_const(&err, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
+                        }
+
+                        dbus_message_append_args(reply, DBUS_TYPE_UINT32, &status, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &dh_msg3, sizeof(sgx_dh_msg3_t), DBUS_TYPE_INVALID);
+
+                        _dbus_connection_send_attestation_reply(connection, message, reply, &err);
+
+                        return DBUS_HANDLER_RESULT_HANDLED;
+                } else if(strncmp(member, DBUS_TRUSTED_CLOSE_SESSION, strlen(DBUS_TRUSTED_CLOSE_SESSION)) == 0) {
+                        status = _dbus_enclave_reply_close_session(connection->enclave_id, (char*)sender);
+
+                        return DBUS_HANDLER_RESULT_HANDLED;
+                } else {
+                        DBusTrustedSession *session = _dbus_trusted_connection_create_session (connection, "", "", "", (char *)sender);
+
+                        link->data = _dbus_trusted_connection_decrypt_message(session, message, &err);
+
+                        if (dbus_error_is_set(&err)) {
+                                _dbus_connection_send_attestation_reply(connection, message, NULL, &err);
+
+                                return DBUS_HANDLER_RESULT_HANDLED;
+                        } else {
+                                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+                        }
+                }
+        } else {
+                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+}
+
 void _dbus_trusted_connection_set_enclave_id (DBusConnection  *connection, unsigned long int eid) {
         connection->enclave_id = eid;
 }
@@ -6519,35 +6509,43 @@ unsigned long int _dbus_trusted_connection_get_enclave_id (DBusConnection *conne
 }
 
 dbus_bool_t dbus_trusted_connection_send (DBusTrustedSession *session, DBusMessage *message, dbus_uint32_t *serial, DBusError *error) {
+        DBusMessage *send_message = message;
+
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
-		_dbus_trusted_connection_encrypt_message(session, message, error);
+		send_message = _dbus_trusted_connection_encrypt_message(session, message, error);
 	}
 
-	return dbus_connection_send(session->connection, message, serial);
+	return dbus_connection_send(session->connection, send_message, serial);
 }
 
 DBusMessage* dbus_trusted_connection_send_with_reply_and_block (DBusTrustedSession *session, DBusMessage *message, int timeout_milliseconds, DBusError *error) {
+        DBusMessage *send_message = message;
+
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
-		_dbus_trusted_connection_encrypt_message(session, message, error);
+		send_message = _dbus_trusted_connection_encrypt_message(session, message, error);
 	}
 
-	return dbus_connection_send_with_reply_and_block(session->connection, message, timeout_milliseconds, error);
+	return dbus_connection_send_with_reply_and_block(session->connection, send_message, timeout_milliseconds, error);
 }
 
 void dbus_trusted_connection_send_preallocated (DBusTrustedSession *session, DBusPreallocatedSend *preallocated, DBusMessage *message, dbus_uint32_t *client_serial, DBusError *error) {
+        DBusMessage *send_message = message;
+
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
-		_dbus_trusted_connection_encrypt_message(session, message, error);
+		send_message = _dbus_trusted_connection_encrypt_message(session, message, error);
 	}
 
-	dbus_connection_send_preallocated(session->connection, preallocated, message, client_serial);
+	dbus_connection_send_preallocated(session->connection, preallocated, send_message, client_serial);
 }
 
 dbus_bool_t dbus_trusted_connection_send_with_reply (DBusTrustedSession *session, DBusMessage *message, DBusPendingCall **pending_return, int timeout_milliseconds, DBusError *error) {
+        DBusMessage *send_message = message;
+
 	if(dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
-		_dbus_trusted_connection_encrypt_message(session, message, error);
+		send_message = _dbus_trusted_connection_encrypt_message(session, message, error);
 	}
 
-	return dbus_connection_send_with_reply(session->connection, message, pending_return, timeout_milliseconds);
+	return dbus_connection_send_with_reply(session->connection, send_message, pending_return, timeout_milliseconds);
 }
 
 unsigned long int _dbus_trusted_connection_get_enclave_id_from_session (DBusTrustedSession *session) {
@@ -6692,56 +6690,78 @@ sgx_status_t _dbus_trusted_connection_internal_decrypt_message(uint64_t eid, cha
 	}
 }
 
-void _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error) {
-	return;
+DBusMessage* _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error) {
+        uint32_t serial = dbus_message_get_serial(message);
+	char *data;
+        int total_size;
 
-	/*DBusString *str = message->body;
-	DBUS_STRING_PREAMBLE (str);
-	uint64_t total_size = real->len;
+        /** We must set a serial here to allow the demarshalling */
+        if(serial == 0)
+                dbus_message_set_serial(message, 1);
 
+        if(!dbus_message_marshal(message, &data, &total_size)) {
+                dbus_set_error_const(error, "Marshal Error", "Unable to marshal the message. This may be caused by out of memory.");
+        }
+
+        /** Return the original message serial */
+        if(serial == 0)
+                dbus_message_set_serial(message, serial);
+        
 	if(total_size > 0) {
-		uint8_t* payload = real->str;
-		uint64_t response_size = sizeof(sgx_aes_gcm_data_t) + total_size;
-		uint8_t* response = malloc(response_size + 1);
+                uint64_t response_size = sizeof(sgx_aes_gcm_data_t) + total_size;
+		uint8_t* response = malloc(response_size);
 
-		sgx_status_t status = _dbus_trusted_connection_internal_encrypt_message(session->connection->enclave_id, session->tdbus_uid, payload, total_size, (sgx_aes_gcm_data_t*)response, response_size);
+		sgx_status_t status = _dbus_trusted_connection_internal_encrypt_message(session->connection->enclave_id, session->tdbus_uid, data, total_size, (sgx_aes_gcm_data_t*)response, response_size);
 
 		if(status != SGX_SUCCESS) {
 			dbus_set_error_const(error, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
-			return;
+			return NULL;
 		}
 
-		//set new body. How????
-		real->len = response_size;
-		real->allocated = response_size + 1;
-		real->str = response;
-		real->str[response_size] = '\0';
-	}*/
+                DBusMessage* ret = _dbus_message_make_a_copy(message);
+                dbus_message_set_serial(ret, serial);
+
+                dbus_message_append_args(ret, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &response, response_size, DBUS_TYPE_INVALID);
+
+                return ret;
+	} else {
+                return message;
+        }
 }
 
-void _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error) {
-	return;
+DBusMessage* _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error) {
+        const char* signature = dbus_message_get_signature(message);
+        if(strncmp(signature, "ay", 2) != 0) {
+                return message;
+        }
 
-	/*DBusString *str = message->body;
-	DBUS_STRING_PREAMBLE (str);
-	uint64_t total_size = real->len;
+	uint8_t *cipher;
+        uint32_t len;
+        dbus_message_get_args(message, error, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &cipher, &len, DBUS_TYPE_INVALID);
 
-	if(total_size > 0) {
-		uint8_t* cipher = real->str;
-		uint64_t response_size = total_size - sizeof(sgx_aes_gcm_data_t);
-		uint8_t* response = malloc(response_size + 1);
+        if (dbus_error_is_set(error)) {
+		return message;
+	}
 
-		sgx_status_t status = _dbus_trusted_connection_internal_decrypt_message(session->connection->enclave_id, session->tdbus_uid, (sgx_aes_gcm_data_t*)cipher, total_size, response, response_size);
+	uint64_t response_size = len - sizeof(sgx_aes_gcm_data_t);
+	char* response = malloc(response_size);
 
-		if(status != SGX_SUCCESS) {
-			dbus_set_error_const(error, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
-			return;
-		}
+	sgx_status_t status = _dbus_trusted_connection_internal_decrypt_message(session->connection->enclave_id, session->tdbus_uid, (sgx_aes_gcm_data_t*)cipher, len, response, response_size);
 
-		//set new body. How????
-		real->len = response_size;
-		real->allocated = response_size + 1;
-		real->str = response;
-		real->str[response_size] = '\0';
-	}*/
+	if(status != SGX_SUCCESS) {
+		dbus_set_error_const(error, "SGX ERROR", _dbus_trusted_connection_sgx_error_translate(status));
+		return NULL;
+	}
+
+        DBusMessage* ret = dbus_message_demarshal(response, response_size, error);
+
+        if (dbus_error_is_set(error)) {
+                return message;
+        }
+
+        _dbus_message_set_serial_no_assert(ret, dbus_message_get_serial(message));
+	if(dbus_message_get_reply_serial(message) != 0) dbus_message_set_reply_serial(ret, dbus_message_get_reply_serial(message));
+        if(dbus_message_get_sender(message) != NULL) dbus_message_set_sender(ret, dbus_message_get_sender(message));
+
+        return ret;
 }

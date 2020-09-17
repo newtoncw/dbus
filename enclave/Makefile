@@ -47,5 +47,5 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
-	@rm -f *.o $(Enclave_Name) $(Signed_Enclave_Name)
+	@rm -f *.o $(Enclave_Name) $(Signed_Enclave_Name) enclave_t.c enclave_t.h enclave_u.c enclave_u.h
 

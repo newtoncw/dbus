@@ -168,9 +168,9 @@ DBusConnection* _dbus_trusted_connection_get_connection_from_session(DBusTrusted
 const char* _dbus_trusted_connection_sgx_error_translate(sgx_status_t status);
 sgx_status_t _dbus_trusted_connection_internal_encrypt_message(uint64_t eid, char *uid, uint8_t* message, size_t message_size, sgx_aes_gcm_data_t* response, size_t response_size);
 sgx_status_t _dbus_trusted_connection_internal_decrypt_message(uint64_t eid, char *uid, sgx_aes_gcm_data_t* message, size_t message_size, uint8_t* response, size_t response_size);
-void _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
-void _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
-DBusHandlerResult _dbus_connection_filter_attestation_messages (DBusConnection *connection, DBusMessage *message);
+DBusMessage* _dbus_trusted_connection_encrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+DBusMessage* _dbus_trusted_connection_decrypt_message(DBusTrustedSession *session, DBusMessage *message, DBusError *error);
+DBusHandlerResult _dbus_connection_filter_attestation_messages (DBusConnection *connection, DBusList *message);
 
 DBUS_END_DECLS
 

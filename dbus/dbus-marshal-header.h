@@ -127,6 +127,11 @@ void          _dbus_header_byteswap               (DBusHeader        *header,
 DBUS_PRIVATE_EXPORT
 char          _dbus_header_get_byte_order         (const DBusHeader  *header);
 
+/**
+ * NEW ADDITIONS TO MANAGE TRUSTED CONNECTIONS
+ */
+void _dbus_header_set_serial_no_assert (DBusHeader *header, dbus_uint32_t serial);
+
 
 
 #endif /* DBUS_MARSHAL_HEADER_H */
